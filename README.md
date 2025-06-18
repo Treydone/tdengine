@@ -18,5 +18,10 @@ Grafana:
 
 select * from sensors.hourly_aggregation;
 
-
 https://webhook.site/#!/view/720f0c42-aaee-4c1f-baf2-00b6a4f46b21/0e3ee9f7-62d0-4ead-8dac-74a307a91ab1/1
+
+
+TODO
+- Live query pour Grafana
+- select * from sensors.hourly_aggregation where ts > $from and ts < $to interval($interval)
+
