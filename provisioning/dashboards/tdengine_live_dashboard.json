@@ -1,0 +1,79 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "TDengine Live Dashboard",
+    "timezone": "browser",
+    "panels": [
+      {
+        "type": "timeseries",
+        "title": "Live Temperature Data",
+        "targets": [
+          {
+            "refId": "A",
+            "rawSql": "SELECT ts, temperature FROM readings ORDER BY ts DESC LIMIT 100",
+            "format": "time_series"
+          }
+        ],
+        "fieldConfig": {
+          "overrides": [],
+          "defaults": {
+            "custom": {}
+          }
+        },
+        "gridPos": { "x": 0, "y": 0, "w": 12, "h": 6 }
+      },
+      {
+        "type": "stat",
+        "title": "Current Temperature",
+        "targets": [
+          {
+            "refId": "B",
+            "rawSql": "SELECT LAST(temperature) AS temperature FROM readings",
+            "format": "table"
+          }
+        ],
+        "gridPos": { "x": 12, "y": 0, "w": 6, "h": 6 },
+        "options": {
+          "colorMode": "value",
+          "reduceOptions": {
+            "values": true,
+            "fields": "",
+            "calcs": ["lastNotNull"]
+          },
+          "orientation": "horizontal"
+        }
+      },
+      {
+        "type": "table",
+        "title": "Raw Data Table",
+        "targets": [
+          {
+            "refId": "C",
+            "rawSql": "SELECT ts, temperature, humidity FROM readings ORDER BY ts DESC LIMIT 20",
+            "format": "table"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 6, "w": 24, "h": 12 },
+        "options": {
+          "showHeader": true
+        }
+      }
+    ],
+    "schemaVersion": 37,
+    "style": "dark",
+    "tags": ["live", "iot", "tdengine"],
+    "templating": {
+      "list": []
+    },
+    "time": {
+      "from": "now-5m",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"],
+      "liveNow": true
+    },
+    "refresh": "5s"
+  },
+  "overwrite": false
+}
