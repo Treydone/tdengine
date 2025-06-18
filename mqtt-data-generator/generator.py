@@ -28,7 +28,7 @@ broker = os.getenv("MQTT_BROKER", "mqtt-broker")  # Utilisation du nom du servic
 port = int(os.getenv("MQTT_PORT", 1883))  # Port par défaut pour MQTT
 wait_for_broker(broker, port)
 
-topic = os.getenv("MQTT_TOPIC", "sensor/datar")
+topic = os.getenv("MQTT_TOPIC", "sensor/data")
 
 # Configuration des paramètres de simulation
 SECONDS_PER_HOUR = 1  # 1 seconde dans la simulation correspond à 1 heure réelle
@@ -123,7 +123,7 @@ def main():
                     "location": sensor["location"],
                     "temperature": temperature,
                     "humidity": humidity,
-                    "timestamp": int((simulated_time + timedelta(seconds=second_fraction)).timestamp())
+                    "timestamp": int((simulated_time + timedelta(seconds=second_fraction)).timestamp()*i)
                 }
 
                 # Publier les données

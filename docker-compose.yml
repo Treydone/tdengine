@@ -15,7 +15,6 @@ services:
   # TDengine Service
   tdengine:
     image: tdengine/tdengine:3.3.6.9
-    pull_policy: always
     user: "root"
     volumes:
       - tdengine_data:/var/lib/taos
@@ -34,10 +33,10 @@ services:
   # Mosquitto MQTT Broker
   mqtt-broker:
     image: eclipse-mosquitto:2.0.21
-    pull_policy: always
     volumes:
       - mosquitto_data:/mosquitto/data
       - mosquitto_logs:/mosquitto/log
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
     ports:
       - "1883:1883"  # MQTT protocol
       - "9001:9001"  # WebSocket for MQTT
@@ -159,7 +158,7 @@ services:
         apk add --no-cache python3 py3-pip && \
         python3 -m venv /usr/src/env && \
         . /usr/src/env/bin/activate && \
-        pip install paho-mqtt && \
+        pip install paho-mqtt requests && \
         python /usr/src/mqtt_to_keeqhq.py
       "
     volumes:
@@ -173,3 +172,31 @@ services:
       - app-network
     depends_on:
       - mqtt-broker
+
+  mqtt-to-tdengine:
+    image: eclipse-mosquitto:2.0.21
+    command: >
+      sh -c "
+        apk add --no-cache python3 py3-pip && \
+        python3 -m venv /usr/src/env && \
+        . /usr/src/env/bin/activate && \
+        pip install paho-mqtt==2.1.0 taospy==2.8.1 && \
+        python /usr/src/mqtt_to_tdengine.py
+      "
+    volumes:
+      - ./mqtt-to-tdengine/mqtt_to_tdengine.py:/usr/src/mqtt_to_tdengine.py
+    environment:
+      - MQTT_BROKER=mqtt-broker
+      - MQTT_PORT=1883
+      - MQTT_TOPIC=sensor/data
+      - TDENGINE_HOST=http://tdengine:6041
+      - TDENGINE_USER=root
+      - TDENGINE_PASSWORD=taosdata
+      - TDENGINE_DB=sensors
+      - TDENGINE_TABLE=readings
+    networks:
+      - app-network
+    depends_on:
+      - mqtt-broker
+      - tdengine
+
