@@ -178,17 +178,9 @@ services:
       - tdengine
 
   tdengine-to-keephq:
-    image: eclipse-mosquitto:2.0.21
-    command: >
-      sh -c "
-        apk add --no-cache python3 py3-pip && \
-        python3 -m venv /usr/src/env && \
-        . /usr/src/env/bin/activate && \
-        pip install requests taospy==2.8.1 && \
-        python /usr/src/tdengine_to_keephq.py
-      "
-    volumes:
-      - ./tdengine-to-tdengine/tdengine_to_keephq.py:/usr/src/tdengine_to_keephq.py
+    build:
+      context: .
+      dockerfile: tdengine-to-keephq.Dockerfile
     environment:
       - TDENGINE_IP=tdengine
       - TDENGINE_PORT=6030
@@ -196,7 +188,8 @@ services:
       - TDENGINE_PASSWORD=taosdata
       - TDENGINE_DB=sensors
       - TDENGINE_TOPIC=high_temperature_topic
-      - KEEPHQ_WEBHOOK_URL="https://hooks.keephq.dev/api/v1/YOUR_WEBHOOK_ENDPOINT"
+      - KEEPHQ_WEBHOOK_URL=http://keep-backend:8080/api/v1/YOUR_WEBHOOK_ENDPOINT
+      - LD_LIBRARY_PATH=/usr/lib:/usr/local/lib
     networks:
       - app-network
     depends_on:
