@@ -96,6 +96,8 @@ services:
       - "8090:8080"
     environment:
       - AUTH_TYPE=NO_AUTH
+      - KEEP_LOG_LEVEL=DEBUG
+      - KEEP_PROVIDER_LOGS_ENABLED=true
       - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus
       - KEEP_METRICS=true
       - PORT=8080
@@ -109,9 +111,11 @@ services:
       - PUSHER_HOST=keep-websocket-server
       - PUSHER_PORT=6001
       - USE_NGROK=false
+      - AUTOLOAD_WORKFLOWS=true
     image: us-central1-docker.pkg.dev/keephq/keep/keep-api
     volumes:
       - ./state:/state
+      - ./workflows:/app/workflows
     networks:
       - app-network
 
@@ -188,7 +192,9 @@ services:
       - TDENGINE_PASSWORD=taosdata
       - TDENGINE_DB=sensors
       - TDENGINE_TOPIC=high_temperature_topic
-      - KEEPHQ_WEBHOOK_URL=http://keep-backend:8080/api/v1/YOUR_WEBHOOK_ENDPOINT
+      - KEEPHQ_URL=http://keep-backend:8080
+      - KEEPHQ_PROVIDER=webhook
+      - KEEPHQ_API_KEY=votre_token_api
       - LD_LIBRARY_PATH=/usr/lib:/usr/local/lib
     networks:
       - app-network

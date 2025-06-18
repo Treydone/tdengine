@@ -1,0 +1,14 @@
+apiVersion: v.1.0
+kind: Workflow
+metadata:
+  name: tdengine-alerts
+  description: "Workflow pour les alertes TDengine"
+  version: 1
+spec:
+  source:
+    provider: webhook
+  steps:
+    - name: process-alert
+      type: noop
+      config: {}
+  enabled: true
