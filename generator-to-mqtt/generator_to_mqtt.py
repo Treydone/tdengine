@@ -24,11 +24,11 @@ def wait_for_broker(host, port, timeout=30):
 
 
 # Configuration MQTT
-broker = os.getenv("MQTT_BROKER", "mqtt-broker")  # Utilisation du nom du service Docker
-port = int(os.getenv("MQTT_PORT", 1883))  # Port par défaut pour MQTT
+broker = os.getenv("MQTT_BROKER")  # Utilisation du nom du service Docker
+port = int(os.getenv("MQTT_PORT"))  # Port par défaut pour MQTT
 wait_for_broker(broker, port)
 
-topic = os.getenv("MQTT_TOPIC", "sensor/data")
+topic = os.getenv("MQTT_TOPIC")
 
 # Configuration des paramètres de simulation
 SECONDS_PER_HOUR = 1  # 1 seconde dans la simulation correspond à 1 heure réelle
@@ -89,11 +89,12 @@ def generate_daily_pattern(hour, minute_fraction, sensor_config, is_hot_day):
 
 
 def main():
-    client = mqtt.Client()
+    client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
     client.connect(broker, port)
 
     # Initialiser la date de simulation au début d'une journée (ex : 00h00)
-    simulated_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    #simulated_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    simulated_time = datetime.now()
 
     # Déterminer pour chaque capteur si la journée est chaude
     is_hot_day = {sensor["sensor_id"]: random.random() < HIGH_TEMP_DAY for sensor in sensors}
@@ -123,7 +124,7 @@ def main():
                     "location": sensor["location"],
                     "temperature": temperature,
                     "humidity": humidity,
-                    "timestamp": int((simulated_time + timedelta(seconds=second_fraction)).timestamp()*i)
+                    "timestamp": int((simulated_time + timedelta(seconds=second_fraction)).timestamp())
                 }
 
                 # Publier les données

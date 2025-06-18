@@ -17,5 +17,5 @@ Grafana:
 - Login : `admin`, Password : `admin`.
 
 
-select _wstart as ts, avg_temperature as current from sensors.hourly_aggregation;
+
 

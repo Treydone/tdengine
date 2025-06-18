@@ -43,28 +43,6 @@ services:
     networks:
       - app-network
 
-  # MQTT Data Generator
-  mqtt-generator:
-    image: eclipse-mosquitto:2.0.21
-    command: >
-      sh -c "
-        apk add --no-cache python3 py3-pip && \
-        python3 -m venv /usr/src/env && \
-        . /usr/src/env/bin/activate && \
-        pip install paho-mqtt && \
-        python /usr/src/generator.py
-      "
-    volumes:
-      - ./mqtt-data-generator/generator.py:/usr/src/generator.py
-    environment:
-      - MQTT_BROKER=mqtt-broker
-      - MQTT_PORT=1883
-      - MQTT_TOPIC=alerts/high_temperature
-    networks:
-      - app-network
-    depends_on:
-      - mqtt-broker
-
   # Grafana for visualizing TDengine data
   grafana:
     image: grafana/grafana:12.0.2
@@ -151,23 +129,22 @@ services:
     networks:
       - app-network
 
-  mqtt-to-keeqhq:
+  generator-to-mqtt:
     image: eclipse-mosquitto:2.0.21
     command: >
       sh -c "
         apk add --no-cache python3 py3-pip && \
         python3 -m venv /usr/src/env && \
         . /usr/src/env/bin/activate && \
-        pip install paho-mqtt requests && \
-        python /usr/src/mqtt_to_keeqhq.py
+        pip install paho-mqtt==2.1.0 && \
+        python /usr/src/generator_to_mqtt.py
       "
     volumes:
-      - ./mqtt-to-keephq/mqtt_to_keeqhq.py:/usr/src/mqtt_to_keeqhq.py
+      - ./generator-to-mqtt/generator_to_mqtt.py:/usr/src/generator_to_mqtt.py
     environment:
       - MQTT_BROKER=mqtt-broker
       - MQTT_PORT=1883
-      - MQTT_TOPIC=alerts/high_temperature
-      - WEBHOOK_URL=http://keep-backend:8080/api/v1/YOUR_WEBHOOK_ENDPOINT
+      - MQTT_TOPIC=sensor/data
     networks:
       - app-network
     depends_on:
@@ -200,3 +177,28 @@ services:
       - mqtt-broker
       - tdengine
 
+  tdengine-to-keephq:
+    image: eclipse-mosquitto:2.0.21
+    command: >
+      sh -c "
+        apk add --no-cache python3 py3-pip && \
+        python3 -m venv /usr/src/env && \
+        . /usr/src/env/bin/activate && \
+        pip install requests taospy==2.8.1 && \
+        python /usr/src/tdengine_to_keephq.py
+      "
+    volumes:
+      - ./tdengine-to-tdengine/tdengine_to_keephq.py:/usr/src/tdengine_to_keephq.py
+    environment:
+      - TDENGINE_IP=tdengine
+      - TDENGINE_PORT=6030
+      - TDENGINE_USER=root
+      - TDENGINE_PASSWORD=taosdata
+      - TDENGINE_DB=sensors
+      - TDENGINE_TOPIC=high_temperature_topic
+      - KEEPHQ_WEBHOOK_URL="https://hooks.keephq.dev/api/v1/YOUR_WEBHOOK_ENDPOINT"
+    networks:
+      - app-network
+    depends_on:
+      - mqtt-broker
+      - tdengine
