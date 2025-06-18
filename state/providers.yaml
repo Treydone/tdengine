@@ -1,9 +1,0 @@
-apiVersion: v.1.0
-kind: Provider
-metadata:
-  name: webhook
-  id: webhook
-spec:
-  type: webhook
-  webhook:
-    description: "TDengine Alert Webhook"

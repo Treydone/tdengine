@@ -124,18 +124,8 @@ def send_alert_to_keephq(message):
         # Récupération de l'heure actuelle au format ISO
         current_time_iso = datetime.now().isoformat()
 
-        # Extraction de la localisation
-        location = "Capteur inconnu"
-        if "location" in data:
-            location = data["location"]
-        elif "group_id" in data:
-            sensor_id = data.get("group_id", 0)
-            if sensor_id == 1:
-                location = "Paris"
-            elif sensor_id == 2:
-                location = "Marseille"
-            else:
-                location = f"Capteur {sensor_id}"
+        # Extraction du sensor
+        sensor_id = data.get("sensor_id")
 
         # Création d'un identifiant unique pour l'alerte
         alert_id = str(uuid.uuid4())
@@ -144,24 +134,24 @@ def send_alert_to_keephq(message):
         payload = {
             "id": alert_id,
             "name": title,
-            "status": "firing",  # Doit être une valeur de AlertStatus
+            "status": "firing",
             "severity": severity,
             "lastReceived": current_time_iso,
             "firingStartTime": current_time_iso,
             "firingCounter": 1,
             "environment": "production",
             "service": "TDengine",
-            "source": [f"TDengine - {location}"],  # Source comme liste
+            "source": [f"Agent TDEngine vers KeepHQ"],
             "description": description,
             "description_format": "markdown",
             "pushed": True,
             "event_id": alert_id,
             "labels": {
-                "location": location,
+                "sensor": sensor_id,
                 "service": "TDengine",
                 "type": "temperature_humidity"
             },
-            "fingerprint": f"tdengine-alert-{location}-{int(time.time())}",
+            "fingerprint": f"tdengine-alert-{sensor_id}",
             "providerId": keephq_provider,
             "providerType": "webhook"
         }

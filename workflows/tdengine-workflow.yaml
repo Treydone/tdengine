@@ -1,14 +1,24 @@
-apiVersion: v.1.0
-kind: Workflow
-metadata:
-  name: tdengine-alerts
-  description: "Workflow pour les alertes TDengine"
-  version: 1
-spec:
-  source:
-    provider: webhook
-  steps:
-    - name: process-alert
-      type: noop
-      config: {}
-  enabled: true
+workflow:
+  id: 90fc2706-68a1-43d7-becf-8c6daf046af4
+  name: test
+  description: test
+  disabled: false
+  triggers:
+    - type: alert
+      cel: source=="Sensor 2"
+  inputs: []
+  owners: []
+  services: []
+  consts: {}
+  steps: []
+  actions:
+    - name: http-action
+      provider:
+        type: http
+        config: "{{ providers.default-http }}"
+        with:
+          url: https://webhook.site/720f0c42-aaee-4c1f-baf2-00b6a4f46b21
+          method: POST
+          body:
+            name: "{{ alert.name }}"
+            description: "{{ alert.description }}"
