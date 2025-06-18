@@ -50,11 +50,17 @@ services:
     command: >
       sh -c "
         apk add --no-cache python3 py3-pip && \
-        pip3 install paho-mqtt && \
-        python3 /usr/src/generator.py
+        python3 -m venv /usr/src/env && \
+        . /usr/src/env/bin/activate && \
+        pip install paho-mqtt && \
+        python /usr/src/generator.py
       "
     volumes:
       - ./mqtt-data-generator/generator.py:/usr/src/generator.py
+    environment:
+      - MQTT_BROKER=mqtt-broker
+      - MQTT_PORT=1883
+      - MQTT_TOPIC=alerts/high_temperature
     networks:
       - app-network
     depends_on:
@@ -68,12 +74,15 @@ services:
       - grafana_data:/var/lib/grafana
       - ./provisioning:/etc/grafana/provisioning
     environment:
-      - GF_INSTALL_PLUGINS=grafana-mqtt-datasource
+#      - GF_INSTALL_PLUGINS=grafana-mqtt-datasource
+      - GF_PLUGINS_PREINSTALL=grafana-mqtt-datasource, tdengine-datasource@@https://www.tdengine.com/assets-download/grafana-plugin/tdengine-datasource.zip
       - GF_SECURITY_ADMIN_USER=admin         # Utilisateur par défaut
       - GF_SECURITY_ADMIN_PASSWORD=admin     # Mot de passe par défaut
       - GF_FEATURE_TOGGLE_LIVE=true          # Activer le mode live pour WebSocket
       - GF_LIVE_ALLOWED_ORIGINS=*            # Autoriser toutes les origines pour Live
       - GF_LIVE_GRPC_PORT=3000               # Port Live pour WebSocket
+      - TDENGINE_API=http://tdengine:6041
+      - TDENGINE_BASIC_AUTH=cm9vdDp0YW9zZGF0YQ== # #printf "$TDENGINE_USER:$TDENGINE_PASSWORD" | base64
     ports:
       - "3000:3000" # Interface Web de Grafana
     depends_on:
@@ -84,13 +93,13 @@ services:
   # KeepHQ Service
   keep-frontend:
     ports:
-      - "3000:3000"
+      - "3100:3000"
     environment:
       - AUTH_TYPE=NO_AUTH
       - API_URL=http://keep-backend:8080
       - NEXTAUTH_SECRET=secret
-      - NEXTAUTH_URL=http://localhost:3000
-      - NEXT_PUBLIC_API_URL=http://localhost:8080
+      - NEXTAUTH_URL=http://localhost:3100
+      - NEXT_PUBLIC_API_URL=http://localhost:8090
       - POSTHOG_KEY=phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ
       - POSTHOG_HOST=https://ingest.keephq.dev
       - NEXT_PUBLIC_SENTRY_DSN=https://0d4d59e3105ffe8afa27dcb95a222009@o4505515398922240.ingest.us.sentry.io/4508258058764288
@@ -102,10 +111,12 @@ services:
       - ./state:/state
     depends_on:
       - keep-backend
+    networks:
+      - app-network
 
   keep-backend:
     ports:
-      - "8080:8080"
+      - "8090:8080"
     environment:
       - AUTH_TYPE=NO_AUTH
       - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus
@@ -124,6 +135,8 @@ services:
     image: us-central1-docker.pkg.dev/keephq/keep/keep-api
     volumes:
       - ./state:/state
+    networks:
+      - app-network
 
   keep-websocket-server:
     image: quay.io/soketi/soketi:1.4-16-debian
@@ -136,14 +149,18 @@ services:
       - SOKETI_DEFAULT_APP_ID=1
       - SOKETI_DEFAULT_APP_KEY=keepappkey
       - SOKETI_DEFAULT_APP_SECRET=keepappsecret
+    networks:
+      - app-network
 
   mqtt-to-keeqhq:
     image: eclipse-mosquitto:2.0.21
     command: >
       sh -c "
         apk add --no-cache python3 py3-pip && \
-        pip3 install paho-mqtt && \
-        python3 /usr/src/mqtt_to_keeqhq.py
+        python3 -m venv /usr/src/env && \
+        . /usr/src/env/bin/activate && \
+        pip install paho-mqtt && \
+        python /usr/src/mqtt_to_keeqhq.py
       "
     volumes:
       - ./mqtt-to-keephq/mqtt_to_keeqhq.py:/usr/src/mqtt_to_keeqhq.py

@@ -1,14 +1,34 @@
 import time
+import os
+import socket
 import json
 import random
 import math
 from datetime import datetime, timedelta
 import paho.mqtt.client as mqtt
 
+
+def wait_for_broker(host, port, timeout=30):
+    """ Attend que le broker MQTT soit disponible """
+    start_time = time.time()
+    while True:
+        try:
+            with socket.create_connection((host, port), timeout=5):
+                print("Broker MQTT est disponible")
+                break
+        except (socket.error, ConnectionRefusedError):
+            if time.time() - start_time > timeout:
+                raise TimeoutError(f"Le broker MQTT {host}:{port} n'est pas disponible après {timeout} secondes")
+            print(f"Attente de la disponibilité du broker MQTT ({host}:{port})...")
+            time.sleep(2)
+
+
 # Configuration MQTT
-broker = "mqtt-broker"  # Nom de service défini dans docker-compose
-port = 1883  # Port standard MQTT
-topic = "sensor/data"  # Topic vers lequel publier
+broker = os.getenv("MQTT_BROKER", "mqtt-broker")  # Utilisation du nom du service Docker
+port = int(os.getenv("MQTT_PORT", 1883))  # Port par défaut pour MQTT
+wait_for_broker(broker, port)
+
+topic = os.getenv("MQTT_TOPIC", "sensor/datar")
 
 # Configuration des paramètres de simulation
 SECONDS_PER_HOUR = 1  # 1 seconde dans la simulation correspond à 1 heure réelle
