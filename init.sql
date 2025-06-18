@@ -35,3 +35,8 @@ SELECT *
 FROM hourly_aggregation
 WHERE max_temperature > 30;
 
+-- Créer une subscription pour pousser dans MQTT
+CREATE SUBSCRIPTION high_temp_alerts_mqtt ON high_temperature_topic USING MQTT
+     ENDPOINT "tcp://mqtt-broker:1883"
+     TOPIC "alerts/high_temperature";
+

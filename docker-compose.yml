@@ -136,3 +136,23 @@ services:
       - SOKETI_DEFAULT_APP_ID=1
       - SOKETI_DEFAULT_APP_KEY=keepappkey
       - SOKETI_DEFAULT_APP_SECRET=keepappsecret
+
+  mqtt-to-keeqhq:
+    image: eclipse-mosquitto:2.0.21
+    command: >
+      sh -c "
+        apk add --no-cache python3 py3-pip && \
+        pip3 install paho-mqtt && \
+        python3 /usr/src/mqtt_to_keeqhq.py
+      "
+    volumes:
+      - ./mqtt-to-keephq/mqtt_to_keeqhq.py:/usr/src/mqtt_to_keeqhq.py
+    environment:
+      - MQTT_BROKER=mqtt-broker
+      - MQTT_PORT=1883
+      - MQTT_TOPIC=alerts/high_temperature
+      - WEBHOOK_URL=http://keep-backend:8080/api/v1/YOUR_WEBHOOK_ENDPOINT
+    networks:
+      - app-network
+    depends_on:
+      - mqtt-broker
