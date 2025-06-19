@@ -161,7 +161,7 @@ services:
         apk add --no-cache python3 py3-pip && \
         python3 -m venv /usr/src/env && \
         . /usr/src/env/bin/activate && \
-        pip install paho-mqtt==2.1.0 taospy==2.8.1 && \
+        pip install paho-mqtt==2.1.0 taospy==2.8.1 websocket-client==1.8.0 && \
         python /usr/src/mqtt_to_tdengine.py
       "
     volumes:
@@ -175,6 +175,10 @@ services:
       - TDENGINE_PASSWORD=taosdata
       - TDENGINE_DB=sensors
       - TDENGINE_TABLE=readings
+      - GRAFANA_HOST=grafana
+      - GRAFANA_PORT=3000
+      - GRAFANA_CHANNEL=mqtt_measurements
+      - GRAFANA_API_KEY=glsa_zmJ1QdjoncVQ7pryY6l8cRWTeU8bBP8R_64b18473
     networks:
       - app-network
     depends_on:

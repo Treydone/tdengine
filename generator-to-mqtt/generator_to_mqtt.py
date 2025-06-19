@@ -85,6 +85,9 @@ def generate_daily_pattern(hour, minute_fraction, sensor_config, is_hot_day):
     temperature += random.uniform(-1.0, 1.0)
     humidity += random.uniform(-3.0, 3.0)
 
+    # S'assurer que l'humidité est entre 0 et 100%
+    humidity = max(0, min(100, humidity))
+
     return round(temperature, 2), round(humidity, 2)
 
 
@@ -92,54 +95,76 @@ def main():
     client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
     client.connect(broker, port)
 
-    # Initialiser la date de simulation au début d'une journée (ex : 00h00)
-    #simulated_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    # Initialiser le temps simulé au temps actuel
     simulated_time = datetime.now()
 
     # Déterminer pour chaque capteur si la journée est chaude
     is_hot_day = {sensor["sensor_id"]: random.random() < HIGH_TEMP_DAY for sensor in sensors}
 
-    while True:
-        # Heure simulée
-        hour = simulated_time.hour  # Obtenir l'heure actuelle (0-23)
+    try:
+        while True:
+            # Calculer le temps d'intervalle entre chaque point (en secondes)
+            interval = SECONDS_PER_HOUR / POINTS_PER_SECOND  # 0.1 seconde par point
 
-        # Générer 10 points interpolés pour chaque seconde simulée
-        for i in range(POINTS_PER_SECOND):
-            # Calculer la fraction de minute (interpolation)
-            second_fraction = i / POINTS_PER_SECOND
-            minute_fraction = (simulated_time.minute + second_fraction) + simulated_time.second / 60.0
+            # Pour chaque point dans la seconde
+            for i in range(POINTS_PER_SECOND):
+                point_start_time = time.time()
 
-            # Générer des données pour chaque capteur
-            for sensor in sensors:
-                temperature, humidity = generate_daily_pattern(
-                    hour,
-                    minute_fraction,
-                    sensor,
-                    is_hot_day[sensor["sensor_id"]]
-                )
+                # Temps simulé pour ce point spécifique
+                # À chaque point, avancer de 1/10 d'heure (6 minutes) dans le temps simulé
+                point_time = simulated_time + timedelta(hours=i / (POINTS_PER_SECOND))
 
-                # Préparer les données du capteur
-                data = {
-                    "sensor_id": sensor["sensor_id"],
-                    "location": sensor["location"],
-                    "temperature": temperature,
-                    "humidity": humidity,
-                    "timestamp": int((simulated_time + timedelta(seconds=second_fraction)).timestamp())
-                }
+                # Heure simulée pour ce point
+                hour = point_time.hour
+                minute = point_time.minute
 
-                # Publier les données
-                client.publish(topic, json.dumps(data))
-                print(f"Published: {data}")
+                # Calculer la fraction de minute pour ce point
+                minute_fraction = minute + (point_time.second / 60.0)
 
-        # Avancer d'une heure simulée (correspondant à 1 seconde réelle)
-        simulated_time += timedelta(hours=1)
+                # Générer des données pour chaque capteur
+                for sensor in sensors:
+                    temperature, humidity = generate_daily_pattern(
+                        hour,
+                        minute_fraction,
+                        sensor,
+                        is_hot_day[sensor["sensor_id"]]
+                    )
 
-        # Passer au jour suivant si minuit vient d'être atteint
-        if simulated_time.hour == 0:
-            is_hot_day = {sensor["sensor_id"]: random.random() < HIGH_TEMP_DAY for sensor in sensors}
+                    # Préparer les données du capteur
+                    data = {
+                        "sensor_id": sensor["sensor_id"],
+                        "location": sensor["location"],
+                        "temperature": temperature,
+                        "humidity": humidity,
+                        "timestamp": int(point_time.timestamp())
+                    }
 
-        # Pause (1 seconde réelle = 1 heure simulée)
-        time.sleep(SECONDS_PER_HOUR)
+                    # Publier les données
+                    client.publish(topic, json.dumps(data))
+                    print(
+                        f"Point {i + 1}/10: {point_time.strftime('%H:%M:%S')} - Sensor {sensor['sensor_id']} - T: {temperature}°C, H: {humidity}%")
+
+                # Calculer le temps qu'a pris la génération et l'envoi
+                elapsed = time.time() - point_start_time
+
+                # Attendre le temps restant pour compléter l'intervalle
+                sleep_time = max(0, interval - elapsed)
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
+
+            # Après avoir envoyé les 10 points, avancer d'une heure complète dans le temps simulé
+            simulated_time += timedelta(hours=1)
+
+            # Passer au jour suivant si minuit vient d'être atteint
+            if simulated_time.hour == 0:
+                is_hot_day = {sensor["sensor_id"]: random.random() < HIGH_TEMP_DAY for sensor in sensors}
+                print(f"Nouveau jour simulé! Conditions météo mises à jour.")
+
+    except KeyboardInterrupt:
+        print("\nArrêt du générateur de données")
+    finally:
+        client.disconnect()
+        print("Déconnecté du broker MQTT")
 
 
 if __name__ == "__main__":

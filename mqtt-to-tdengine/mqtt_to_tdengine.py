@@ -6,11 +6,50 @@ import taosrest
 import paho.mqtt.client as mqtt
 import random
 import logging
+from websocket import create_connection
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+
+def send_to_grafana_live(grafana_host, grafana_port, grafana_channel, grafana_api_key, payload):
+    # URL du WebSocket Grafana Live
+    grafana_live_url = f"ws://{grafana_host}:{grafana_port}/api/live/push/{grafana_channel}"
+
+    # Construire la requête d'insertion
+    sensor_id = payload.get("sensor_id", 0)
+    location = payload.get("location", "none")
+    timestamp = payload.get("timestamp", 0)
+    temperature = payload.get("temperature", 0.0)
+    humidity = payload.get("humidity", 0.0)
+
+    headers = {
+        "Authorization": f"Bearer {grafana_api_key}"
+    }
+
+    # Timestamp en nanosecondes
+    timestamp = int(timestamp * 1000000000)
+
+    # Convertir les données au format Influx Line Protocol
+    # Format: <measurement>[,<tag_key>=<tag_value>] <field_key>=<field_value> [<timestamp>]
+    line_protocol = f"sensor,id={sensor_id} temperature={temperature},humidity={humidity} {timestamp}"
+
+    try:
+        # Connexion au channel via WebSocket
+        ws = create_connection(grafana_live_url, header=headers)
+        print(f"[INFO] Connected to Grafana Live channel: {grafana_channel}")
+
+        # Envoi des données
+        ws.send(line_protocol)
+        print(f"[INFO] Data sent")
+
+        # Fermer la connexion WebSocket
+        ws.close()
+
+    except Exception as e:
+        print(f"[ERROR] Failed to connect/send data to Grafana Live: {e}")
 
 
 # === Fonction pour insérer des données dans TDengine ===
@@ -79,10 +118,16 @@ def on_message(client, userdata, msg, properties=None):
         tdengine_db = os.getenv("TDENGINE_DB")
         tdengine_table = os.getenv("TDENGINE_TABLE")
 
+        grafana_host = os.getenv("GRAFANA_HOST")
+        grafana_port = os.getenv("GRAFANA_PORT")
+        grafana_channel = os.getenv("GRAFANA_CHANNEL")
+        grafana_api_key = os.getenv("GRAFANA_API_KEY")
+
         insert_into_tdengine(tdengine_host, tdengine_user, tdengine_password, tdengine_db, tdengine_table, payload)
+        send_to_grafana_live(grafana_host, grafana_port, grafana_channel, grafana_api_key, payload)
 
     except Exception as e:
-        logger.error(f"[ERROR] Failed to process MQTT message: {e}")
+        logger.error(f"[ERROR] Failed to process MQTT message", exc_info=True)
 
 def on_connect(client, userdata, flags, rc, properties=None
                ):
