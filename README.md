@@ -30,7 +30,7 @@ TODO
   - Add service account
     - Role Editor
   - Add service account token
-  - glsa_zmJ1QdjoncVQ7pryY6l8cRWTeU8bBP8R_64b18473
+  - 
 - select * from sensors.hourly_aggregation where ts > $from and ts < $to interval($interval)
 
 
