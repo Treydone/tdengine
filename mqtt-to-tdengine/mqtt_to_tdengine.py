@@ -30,7 +30,7 @@ def send_to_grafana_live(grafana_host, grafana_port, grafana_channel, grafana_ap
     }
 
     # Timestamp en nanosecondes
-    timestamp = int(timestamp * 1000000000)
+    timestamp = int(timestamp * 1000000)
 
     # Convertir les données au format Influx Line Protocol
     # Format: <measurement>[,<tag_key>=<tag_value>] <field_key>=<field_value> [<timestamp>]
@@ -43,7 +43,7 @@ def send_to_grafana_live(grafana_host, grafana_port, grafana_channel, grafana_ap
 
         # Envoi des données
         ws.send(line_protocol)
-        print(f"[INFO] Data sent")
+        print(f"[INFO] Data sent {line_protocol}")
 
         # Fermer la connexion WebSocket
         ws.close()
@@ -70,26 +70,26 @@ def insert_into_tdengine(tdengine_host, tdengine_user, tdengine_password, databa
         # Construire la requête d'insertion
         sensor_id = payload.get("sensor_id", 0)
         location = payload.get("location", "none")
-        timestamp = payload.get("timestamp", "now")  # Utiliser "now" si 'ts' n'est pas spécifié
+        timestamp = payload.get("timestamp", 0)  # Au format milliseconds
         temperature = payload.get("temperature", 0.0)
         humidity = payload.get("humidity", 0.0)
 
         # Nom de la table enfant basé sur l'ID du capteur
         child_table = f"{table}_{sensor_id}"
 
-        # Formater correctement le timestamp selon son type
-        if isinstance(timestamp, int):
-            # Convertir le timestamp Unix (secondes) en millisecondes pour TDengine
-            timestamp_value = f"{timestamp * 1000}"  # Conversion en millisecondes
-        elif timestamp == "now":
-            timestamp_value = "NOW"  # Utiliser le mot-clé NOW pour le timestamp actuel
-        else:
-            # Si c'est une chaîne, la laisser telle quelle avec des guillemets
-            timestamp_value = f"'{timestamp}'"
+        # # Formater correctement le timestamp selon son type
+        # if isinstance(timestamp, int):
+        #     # Convertir le timestamp Unix (secondes) en millisecondes pour TDengine
+        #     timestamp_value = f"{timestamp * 1000}"  # Conversion en millisecondes
+        # elif timestamp == "now":
+        #     timestamp_value = "NOW"  # Utiliser le mot-clé NOW pour le timestamp actuel
+        # else:
+        #     # Si c'est une chaîne, la laisser telle quelle avec des guillemets
+        #     timestamp_value = f"'{timestamp}'"
 
         query = (
             f"INSERT INTO {database}.{child_table} USING {database}.{table} TAGS ({sensor_id}, '{location}') "
-            f"VALUES ('{timestamp_value}', {temperature}, {humidity})"
+            f"VALUES ('{timestamp}', {temperature}, {humidity})"
         )
 
         # Exécuter l'insertion
